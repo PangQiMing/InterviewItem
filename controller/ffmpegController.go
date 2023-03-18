@@ -1,4 +1,4 @@
-package ffmpeg
+package controller
 
 import (
 	"fmt"
@@ -89,7 +89,7 @@ func ClipHandler(ctx *gin.Context) {
 
 	//调用ffmpeg剪辑视频
 	savePath := "./download/output.mp4"
-	cmd := exec.Command("ffmpeg", "-i", clipVideo.VideoURL, "-ss", clipVideo.StartTime, "-t", clipVideo.EndTime, "-c:a", "copy", savePath)
+	cmd := exec.Command("service", "-i", clipVideo.VideoURL, "-ss", clipVideo.StartTime, "-t", clipVideo.EndTime, "-c:a", "copy", savePath)
 	err := cmd.Run()
 	if err != nil {
 		log.Println("调用ffmpeg错误:", err)

@@ -9,8 +9,10 @@ import (
 	"os"
 )
 
-// SetupDatabaseConnection 连接数据库,并且返回数据库接口
-func SetupDatabaseConnection() *gorm.DB {
+var DB *gorm.DB
+
+// SetupDatabaseConnection 配置数据库
+func SetupDatabaseConnection() {
 	err := godotenv.Load()
 	if err != nil {
 		panic("加载配置文件出错...")
@@ -32,7 +34,7 @@ func SetupDatabaseConnection() *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-	return db
+	DB = db
 }
 
 // CloseDatabaseConnection 关闭数据库连接
