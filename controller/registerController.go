@@ -28,7 +28,13 @@ func RegisterHandler(ctx *gin.Context) {
 		})
 		return
 	}
-	config.DB.Save(&user)
+	tx := config.DB.Save(&user)
+	if tx.Error != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": tx.Error,
+		})
+		return
+	}
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "注册成功",
 	})

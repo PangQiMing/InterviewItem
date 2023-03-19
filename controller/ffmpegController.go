@@ -1,21 +1,19 @@
 package controller
 
 import (
-	"fmt"
+	"github.com/PangQiMing/InterviewItem/dto"
+	"github.com/PangQiMing/InterviewItem/entity"
+	"github.com/PangQiMing/InterviewItem/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
-
-type ClipVideo struct {
-	VideoURL  string `json:"video_url" form:"video_url"`
-	StartTime string `json:"start_time" form:"start_time"`
-	EndTime   string `json:"end_time" form:"end_time"`
-}
 
 // UploadVideoHandler 上传视频
 func UploadVideoHandler(ctx *gin.Context) {
@@ -48,8 +46,8 @@ func UploadVideoHandler(ctx *gin.Context) {
 	}
 
 	//创建视频文件
-	filename := header.Filename
-	out, err := os.Create(filepath.Join("./uploads", filename))
+	filename := filepath.Join("./uploads", header.Filename)
+	out, err := os.Create(filename)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -68,7 +66,8 @@ func UploadVideoHandler(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"message": fmt.Sprintf("%s 视频上传成功!", filename),
+		"message":   "文件上传成功",
+		"video_url": filename,
 	})
 }
 
@@ -80,25 +79,63 @@ func ClipHandler(ctx *gin.Context) {
 	}
 
 	//做数据绑定
-	var clipVideo ClipVideo
-	bindErr := ctx.BindJSON(&clipVideo)
+	var video dto.VideoDTO
+	bindErr := ctx.BindJSON(&video)
 	if bindErr != nil {
 		log.Println("数据绑定失败...")
 		return
 	}
 
+	//生成唯一的文件名称
+	outFilename := filepath.Join("download", uuid.New().String()+".mp4")
 	//调用ffmpeg剪辑视频
-	savePath := "./download/output.mp4"
-	cmd := exec.Command("service", "-i", clipVideo.VideoURL, "-ss", clipVideo.StartTime, "-t", clipVideo.EndTime, "-c:a", "copy", savePath)
+	cmd := exec.Command("ffmpeg", "-i", video.VideoURL, "-ss", video.StartTime, "-t", video.EndTime, "-c:a", "copy", outFilename)
 	err := cmd.Run()
 	if err != nil {
 		log.Println("调用ffmpeg错误:", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
 		return
 	}
 
+	//把\\双斜杠替换成/斜杠
+	videoURL := strings.Replace(outFilename, "\\", "/", -1)
+
+	//获取文件详细信息
+	var file entity.UploadedFile
+	filename, fileType, fileSize, err := getFileInfo(videoURL)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	account := utils.VerificationToken(ctx)
+
+	log.Println(account)
+	file.UserID = account
+	file.FileName = filename
+	file.FileType = fileType
+	file.FileSize = fileSize
+	file.FileURL = videoURL
+
 	//返回剪辑后的视频URL给用户
 	ctx.JSON(http.StatusOK, gin.H{
-		"message":  "剪辑完成",
-		"videoURL": savePath,
+		"message":   "剪辑完成",
+		"video_url": videoURL,
 	})
+}
+
+func getFileInfo(filename string) (string, string, int64, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return "", "", 0, err
+	}
+	defer file.Close()
+	stat, err := file.Stat()
+	if err != nil {
+		return "", "", 0, err
+	}
+	log.Println(stat.Name(), stat.ModTime(), stat.Mode().Type())
+	return stat.Name(), filepath.Ext(filename), stat.Size() / 1024, nil
 }

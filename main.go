@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/PangQiMing/InterviewItem/config"
 	"github.com/PangQiMing/InterviewItem/controller"
+	"github.com/PangQiMing/InterviewItem/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,11 +12,19 @@ func main() {
 	config.SetupDatabaseConnection()
 	defer config.CloseDatabaseConnection(config.DB)
 
-	r.POST("/register", controller.RegisterHandler)
-	r.POST("/login", controller.LoginHandler)
 	r.Static("/download", "./download")
-	r.POST("/upload", controller.UploadVideoHandler)
-	r.POST("/clip", controller.ClipHandler)
+
+	authRouters := r.Group("api/auth")
+	{
+		authRouters.POST("register", controller.RegisterHandler)
+		authRouters.POST("login", controller.LoginHandler)
+	}
+
+	userRouters := r.Group("api/user", middleware.AuthorizeJWT())
+	{
+		userRouters.POST("/upload", controller.UploadVideoHandler)
+		userRouters.POST("/clip", controller.ClipHandler)
+	}
 	err := r.Run(":8080")
 	if err != nil {
 		panic("服务启动失败...")
