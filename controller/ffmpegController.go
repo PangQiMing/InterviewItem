@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/PangQiMing/InterviewItem/config"
 	"github.com/PangQiMing/InterviewItem/dto"
 	"github.com/PangQiMing/InterviewItem/entity"
 	"github.com/PangQiMing/InterviewItem/utils"
@@ -113,16 +114,39 @@ func ClipHandler(ctx *gin.Context) {
 	account := utils.VerificationToken(ctx)
 
 	log.Println(account)
-	file.UserID = account
+	file.UserAccount = account
 	file.FileName = filename
 	file.FileType = fileType
 	file.FileSize = fileSize
 	file.FileURL = videoURL
-
+	tx := config.DB.Save(&file)
+	if tx.Error != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": tx.Error,
+		})
+		return
+	}
 	//返回剪辑后的视频URL给用户
 	ctx.JSON(http.StatusOK, gin.H{
 		"message":   "剪辑完成",
 		"video_url": videoURL,
+	})
+}
+
+// GetAllFileByUserAccount 获取用户所有剪辑过的视频
+func GetAllFileByUserAccount(ctx *gin.Context) {
+	account := utils.VerificationToken(ctx)
+	var user []entity.User
+	tx := config.DB.Preload("UploadedFile").Where("account = ?", account).Find(&user)
+	if tx.Error != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": tx.Error,
+		})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "查询成功",
+		"data":    user,
 	})
 }
 

@@ -6,9 +6,9 @@ import (
 
 type UploadedFile struct {
 	gorm.Model
-	UserID   string
-	FileName string // 文件名
-	FileType string // 文件类型
-	FileSize int64  // 文件大小
-	FileURL  string //文件地址
+	UserAccount string
+	FileName    string `gorm:"type:varchar(40);not null" json:"file_name"`
+	FileType    string `gorm:"type:varchar(10);not null" json:"file_type"`
+	FileSize    int64  `gorm:"not null" json:"file_size"`
+	FileURL     string `gorm:"type:varchar(255)" json:"file_url"`
 }

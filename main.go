@@ -22,6 +22,7 @@ func main() {
 
 	userRouters := r.Group("api/user", middleware.AuthorizeJWT())
 	{
+		userRouters.GET("/all", controller.GetAllFileByUserAccount)
 		userRouters.POST("/upload", controller.UploadVideoHandler)
 		userRouters.POST("/clip", controller.ClipHandler)
 	}
